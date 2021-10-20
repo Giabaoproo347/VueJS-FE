@@ -4,7 +4,7 @@
     <div class="add-new-category">
       <button id="add-category" @click="showModal()">Thêm mới sản phẩm</button>
     </div>
-    <table  id="categories">
+    <table id="categories">
       <thead>
       <tr>
         <th>ID</th>
@@ -18,16 +18,16 @@
 
       <tbody>
       <tr v-for="(item, index) in posts" :key="item.id">
-        <td>{{index + 1}}</td>
-        <td>{{item.title}}</td>
-        <td style="width: 400px">{{item.description}}</td>
-        <td>{{item.categoryName}}</td>
-        <td>{{item.createdDate}}</td>
+        <td>{{ index + 1 }}</td>
+        <td>{{ item.title }}</td>
+        <td style="width: 400px">{{ item.description }}</td>
+        <td>{{ item.categoryName }}</td>
+        <td>{{ item.createdDate }}</td>
         <td>
           <div style="display: flex; justify-content: center">
             <div class="link link1" @click="onUpdate(item)">Sửa</div>
             |
-            <div  class="link link2" @click="onDelete(item)">Xóa</div>
+            <div class="link link2" @click="onDelete(item)">Xóa</div>
           </div>
         </td>
       </tr>
@@ -38,34 +38,36 @@
   <ModalCreate
       v-show="isModalVisible"
       @close="closeModal"
-      @ok="onCreateNewPost"
+      @ok=" onSubmit"
   >
     <template v-slot:header>
       <span style="color: black; font-size: 18px">Thêm mới danh mục</span>
     </template>
 
     <template v-slot:body>
-       <div class="flex">
-         <label class="title">Title</label>
-        <input v-model="title" style="width: 80%; outline: none; border-radius: 5px; height: 20px; border: 1px solid darkgrey">
-       </div>
+      <div class="flex">
+        <label class="title">Title</label>
+        <input v-model="title"
+               style="width: 80%; outline: none; border-radius: 5px; height: 20px; border: 1px solid darkgrey">
+      </div>
 
       <div class="flex">
         <label class="title">Description</label>
-        <input v-model="description" style="width: 80%; outline: none; border-radius: 5px; height: 20px; border: 1px solid darkgrey">
+        <input v-model="description"
+               style="width: 80%; outline: none; border-radius: 5px; height: 20px; border: 1px solid darkgrey">
       </div>
 
       <div class="flex">
         <label class="title">CategoryId</label>
-        <select @change='onChange($event)' class="form-control" style="width: 80%; outline: none; border-radius: 5px; height: 20px; border: 1px solid darkgrey">
+        <select @change='onChange($event)' class="form-control"
+                style="width: 80%; outline: none; border-radius: 5px; height: 20px; border: 1px solid darkgrey">
           <option value="" selected disabled>Chọn</option>
-          <option v-for="(item) in categories" :key="item.id"  v-bind:value="item.id">{{ item.name }}</option>
+          <option v-for="(item) in categories" :key="item.id" v-bind:value="item.id">{{ item.name }}</option>
         </select>
       </div>
     </template>
   </ModalCreate>
 </template>
-
 
 
 <script>
@@ -76,7 +78,7 @@ import ModalCreate from "@/components/modal/ModalCreate";
 export default {
   name: "Posts",
   components: {
-   ModalCreate,
+    ModalCreate,
   },
 
   data() {
@@ -86,6 +88,8 @@ export default {
       title: null,
       description: null,
       categoryId: null,
+      isEdit: false,
+      object: null,
       categories: [
         {
           "id": 1,
@@ -139,13 +143,23 @@ export default {
     });
   },
   methods: {
-    onUpdate: function(e){
-      console.log(e)
+    onUpdate: function (e) {
+      this.isModalVisible = true;
+      this.isEdit = true;
+      this.object = e;
     },
-    onDelete: function(e){
-      console.log(e)
+    onDelete: function (e) {
+      const id = e.postId;
+      axios.post(`https://localhost:44328/api/deletePost?postId=${id}`).then(res => {
+        if (res) {
+          axios.get("https://localhost:44328/api/getPosts").then(res => {
+            this.posts = res.data;
+          });
+        }
+      });
     },
     showModal() {
+      this.isEdit = false;
       this.isModalVisible = true;
     },
     closeModal() {
@@ -155,20 +169,41 @@ export default {
       console.log(event.target.value)
       this.categoryId = event.target.value
     },
-    onCreateNewPost() {
-      const payload = {
-        Title: this.title,
-        Description: this.description,
-        CategoryId: this.categoryId,
-        CreatedDate: "2021-09-09"
-      }
-      axios.post("https://localhost:44328/api/AddPost", payload).then(res => {
-        console.log(JSON.stringify(res), 'res')
-        this.isModalVisible = false;
-        axios.get("https://localhost:44328/api/getPosts").then(res => {
-          this.posts = res.data;
+    onSubmit() {
+      if (this.isEdit) {
+
+        this.title = this.object.title;
+        this.description = this.object.description;
+        this.categoryId = this.object.categoryId;
+        const payload = {
+          PostId: this.object.postId,
+          Title: this.title,
+          Description: this.description,
+          CategoryId: this.categoryId,
+          CreatedDate: "2020-09-09"
+        }
+        axios.post(`https://localhost:44328/api/updatePost`, payload).then(res => {
+          if (res) {
+            axios.get("https://localhost:44328/api/getPosts").then(res => {
+              this.posts = res.data;
+            });
+          }
         });
-      });
+      } else {
+        const payload = {
+          Title: this.title,
+          Description: this.description,
+          CategoryId: this.categoryId,
+          CreatedDate: "2021-09-09"
+        }
+        axios.post("https://localhost:44328/api/AddPost", payload).then(res => {
+          console.log(JSON.stringify(res), 'res')
+          this.isModalVisible = false;
+          axios.get("https://localhost:44328/api/getPosts").then(res => {
+            this.posts = res.data;
+          });
+        });
+      }
     }
   }
 }
@@ -177,8 +212,9 @@ export default {
 <style>
 
 .container {
- padding: 0 50px 50px 50px;
+  padding: 0 50px 50px 50px;
 }
+
 #categories {
   font-family: Arial, Helvetica, sans-serif;
   border-collapse: collapse;
@@ -190,9 +226,13 @@ export default {
   padding: 8px;
 }
 
-#categories tr:nth-child(even){background-color: #f2f2f2;}
+#categories tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
 
-#categories tr:hover {background-color: #ddd;}
+#categories tr:hover {
+  background-color: #ddd;
+}
 
 #categories th {
   padding-top: 12px;
